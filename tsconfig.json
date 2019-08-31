@@ -1,0 +1,31 @@
+{
+	"include": [
+		"src/**/*.ts"
+	],
+	"compileOnSave": true,
+	"compilerOptions": {
+		"sourceMap": true,
+		"declaration": true,
+		"moduleResolution": "node",
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+		"target": "es6",
+		"lib": [
+			"es7",
+			"es2017",
+			"dom"
+		],
+		"typeRoots": [
+			"node_modules/@types"
+		],
+		"types": [
+			"reflect-metadata"
+		],
+		"baseUrl": "./index.ts"
+	},
+	"exclude": [
+		"node_modules",
+		"tests/*",
+		"dist/*"
+	]
+}
