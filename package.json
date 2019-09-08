@@ -2,7 +2,7 @@
 	"name": "@wssz/modeler-parser",
 	"author": "wszerad91@gmail.com",
 	"license": "MIT",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"devDependencies": {
 		"@types/chai": "^4.2.0",
 		"@types/mocha": "^5.2.7",

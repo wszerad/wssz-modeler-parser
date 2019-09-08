@@ -22,6 +22,8 @@ class TestClass {
 	@Prop([Date]) pArrayDate: Date[];       // copy array and cast to Date
 	@Prop([[Date]]) pArrayDate@D: Date[][]; // copy array (2d) and cast to Date, 3d - ([[[Date]]]), etc.
 }
+
+ModelerParser.parse(TestClass, rawData);
 ```
 
 ## Supported decorators
@@ -30,7 +32,7 @@ class TestClass {
 * for arrays with undefined 'type' will use shallow copy
 * for 2D+ arrays set type in way like this [[Date]] - 2D, [[[Date]]] - 3D, etc.
 
-#### @Default<ParseFunction>(value): Decorator
+#### @Default<ParseFunction>(value: BasicType | BasicFunction): Decorator
 
 ```ts
 type BasicType = string | number | boolean | RegExp | Object;
