@@ -16,7 +16,7 @@
 		"reflect-metadata": "^0.1.13",
 		"typescript": "^3.5.3",
 		"babel-polyfill": "^6.26.0",
-		"@wssz/modeler": "0.1.0"
+		"@wssz/modeler": "0.2.1"
 	},
 	"repository": {
 		"type": "git",
