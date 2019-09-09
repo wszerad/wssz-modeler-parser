@@ -1,12 +1,25 @@
-import { Default, hasMarkers, Prop, Markers, getMarkers, PropMarkers, extractDecoratorMarkers } from '@wssz/modeler';
+import {
+	Default,
+	hasMarkers,
+	Prop,
+	Markers,
+	getMarkers,
+	PropMarkers,
+	extractDecoratorMarkers,
+	Required
+} from '@wssz/modeler';
 import { ItemsParse, Parse } from './decorators';
 
 const parserCache = new Map<any, Function>();
 const helpersCache: Function[] = [];
 
-export function parse(model: any, source: any) {
+export interface ModelerParserOptions {
+	development?: boolean
+}
+
+export function parse(model: any, source: any, options: ModelerParserOptions = {}) {
 	if (!parserCache.has(model)) {
-		parserCache.set(model, new Model(model, getMarkers(model)).execute());
+		parserCache.set(model, new Model(model, getMarkers(model), options).execute());
 	}
 
 	return parserCache.get(model)(source, model, helpersCache, parse);
@@ -15,13 +28,14 @@ export function parse(model: any, source: any) {
 class Model {
 	constructor(
 		private modelClass: any,
-		private markers: Markers
+		private markers: Markers,
+		private options: ModelerParserOptions
 	) {}
 
 	private keysIterator() {
 		const params: Property[] = [];
 		for (let [key, keyMarkers] of this.markers.entries()) {
-			params.push(new Property(this.modelClass, keyMarkers, key));
+			params.push(new Property(this.modelClass, keyMarkers, key, this.options));
 		}
 		return params
 			.map(property => property.execute())
@@ -37,7 +51,7 @@ class Model {
 	execute() {
 		const body = `
 			const obj = new constructor();
-${this.keysIterator()}
+			${this.keysIterator()}
 			return obj;
 		`;
 		return new Function('source', 'constructor', 'params', 'parse', body);
@@ -47,7 +61,8 @@ ${this.keysIterator()}
 class ArrayProperty {
 	constructor(
 		private key: string | number,
-		private depth: number
+		private depth: number,
+		private options: ModelerParserOptions
 	) {}
 
 	private source(key?: string) {
@@ -109,10 +124,12 @@ class Property {
 	constructor(
 		private modelClass: any,
 		private keyMarkers: PropMarkers,
-		private key: string | number
+		private key: string | number,
+		private options: ModelerParserOptions
 	) {
 		const itemParse = this.extractKeyMarkers(ItemsParse);
 		const type = this.extractKeyMarkers(Prop);
+		const required = this.extractKeyMarkers(Required, true);
 		const parse = this.extractKeyMarkers(Parse);
 		const isArray = (type === Array || Array.isArray(type));
 		const {type: itemType, depth} = this.getArrayDepthAndType(type);
@@ -125,24 +142,41 @@ class Property {
 			itemParse,
 			isArray,
 			isDeepArray,
+			required,
 			depth: itemParse ? Math.max(1, depth) : depth,
 			type: isArray? itemType : type
 		};
 	}
 
 	execute() {
+		let body;
 		if (this.discovered.parse) {
-			return `
+			body = `
 				${this.parserExtractor()}
+			`;
+		} else {
+			body = `
+				${this.discovered.def ? this.defaultExtractor() : ''}
+				${this.discovered.def ? `else {` : ''}
+				${this.typeExtractor()}
+				${this.discovered.def ? `\n}` : ''}
 			`;
 		}
 
+		return this.options.development
+			? this.errorCatchWrapper(body)
+			: body;
+	}
+
+	private errorCatchWrapper(body: string) {
 		return `
-			${this.discovered.def ? this.defaultExtractor() : ''}
-			${this.discovered.def ? `else {` : ''}
-			${this.typeExtractor()}
-			${this.discovered.def ? `\n}` : ''}
-		`;
+		try {
+			${body}
+		} catch (e) {
+			throw new Error('ModelerParser error at "${this.key}" filed of ${this.modelClass.name} model!\\n'
+			+ 'Message: ' + e.message + '\\n'
+			+ 'Input: ' + ${this.source()});
+		}`;
 	}
 
 	private body() {
@@ -205,16 +239,34 @@ class Property {
 					break;
 				default:
 					if (this.discovered.type && hasMarkers(this.discovered.type)) {
-						phase = `${this.dest()} = parse(${this.param(this.discovered.type)}, ${this.source()});`;
+						if (!this.discovered.required) {
+							phase = `
+								if (${this.source()} !== undefined) {
+									${this.dest()} = parse(${this.param(this.discovered.type)}, ${this.source()});
+								}
+							`;
+						} else {
+							phase = `${this.dest()} = parse(${this.param(this.discovered.type)}, ${this.source()});`;
+						}
 					} else {
 						phase = `${this.dest(isDeepArray)} = ${this.source(isDeepArray)};`;
 					}
 			}
 		}
 
-		return (isDeepArray || this.discovered.itemParse)
-			? new ArrayProperty(this.key, this.discovered.depth).execute(phase)
-			: phase;
+		if (isDeepArray || this.discovered.itemParse) {
+			if (this.discovered.required) {
+				return new ArrayProperty(this.key, this.discovered.depth, this.options).execute(phase);
+			} else {
+				return `
+					if (Array.isArray(${this.source()})) {
+						${new ArrayProperty(this.key, this.discovered.depth, this.options).execute(phase)}
+					}
+				`;
+			}
+		} else {
+			return phase;
+		}
 	}
 
 	private getArrayDepthAndType(type: any, depth: number = 0) {
