@@ -6,8 +6,8 @@ import {
 	getMarkers,
 	extractDecoratorMarkers,
 	Required,
-    Items,
-    NestedItems
+	Items,
+	NestedItems, PropMarkers
 } from '@wssz/modeler';
 import { ItemsParse, Parse } from './decorators';
 
@@ -46,20 +46,13 @@ class Model {
 
 	private keysIterator() {
 		const params: Property[] = [];
-		for (let [key, keyMarkers] of this.markers.entries()) {
+		const markers = this.markers || new Map();
+		for (let [key, keyMarkers] of markers.entries()) {
 			params.push(new Property(
 				this.modelClass.name,
 				key as string,
-				{
-					type: extractDecoratorMarkers(keyMarkers, Prop),
-					parse: extractDecoratorMarkers(keyMarkers, Parse),
-					items: extractDecoratorMarkers(keyMarkers, Items),
-					nestedItems: extractDecoratorMarkers(keyMarkers, NestedItems),
-					itemParse: extractDecoratorMarkers(keyMarkers, ItemsParse),
-					required: extractDecoratorMarkers(keyMarkers, Required),
-					def: extractDecoratorMarkers(keyMarkers, Default)
-				},
-				0,
+				keyMarkers,
+				false,
 				this.options
 			));
 		}
@@ -84,76 +77,39 @@ class Model {
 	}
 }
 
-class ArrayProperty {
-	constructor(
-		private key: string | number,
-		private depth: number,
-		private options: ModelerParserOptions
-	) {}
-
-	private source(key?: string) {
-		return `source['${key || this.key}']`;
-	}
-
-	private dest(key?: string) {
-		return `obj['${key || this.key}']`;
-	}
-
-	private index(level: number) {
-		return 'i' + 'i'.repeat(this.depth - level);
-	}
-
-	private sourceArray(level: number) {
-		return 'a' + 'a'.repeat(this.depth - level);
-	}
-
-	private destArray(level: number) {
-		return 'c' + 'c'.repeat(this.depth - level);
-	}
-
-	private levelRedeclare(level: number) {
-		return `
-			let ${this.sourceArray(level + 1)} = ${this.sourceArray(level)}[${this.index(level)}];
-			let ${this.destArray(level + 1)} = ${this.destArray(level)}[${this.index(level)}] = [];
-		`;
-	}
-
-	private loopGenerator(depth: number, body: string, source: string, level: number = 0) {
-		if (depth < level) {
-			return body;
-		}
-
-
-		return `
-			for (let ${this.index(level)} = 0; ${this.index(level)} < ${this.sourceArray(level)}.length; ${this.index(level)}++) {
-				${(depth === level) ? '' : this.levelRedeclare(level)}
-				${this.loopGenerator(depth, body, source,level + 1)}
-			}
-		`;
-	}
-
-	execute(body: string) {
-		return `
-			{
-				let ${this.sourceArray(1)} = ${this.source()};
-				let ${this.destArray(1)} = [];
-				${this.loopGenerator(this.depth, body, this.source(), 1)}
-				${this.dest()} = ${this.destArray(1)};
-			}
-		`;
-	}
-}
-
 class Property {
+	private markers: PropertyMarkers;
+
 	constructor(
 		private modelName: string,
 		private key: string,
-		private markers: PropertyMarkers,
-		private depth: number,
+		keyMarkers: PropMarkers,
+		private depth: number | false,
 		private options: ModelerParserOptions
-	) {}
+	) {
+		this.markers = {
+			type: extractDecoratorMarkers(keyMarkers, Prop),
+			parse: extractDecoratorMarkers(keyMarkers, Parse),
+			items: extractDecoratorMarkers(keyMarkers, Items),
+			nestedItems: extractDecoratorMarkers(keyMarkers, NestedItems),
+			itemParse: extractDecoratorMarkers(keyMarkers, ItemsParse),
+			required: extractDecoratorMarkers(keyMarkers, Required),
+			def: extractDecoratorMarkers(keyMarkers, Default)
+		}
+	}
+
+	get isArray(): boolean {
+		return this.depth !== false;
+	}
+
+	get level(): number {
+		return Number(this.depth);
+	}
 
 	execute() {
+		// cast array to simple type if there is no declared
+		const type = (this.markers.type === Array && !this.markers.items) ? undefined : this.markers.type;
+
 		let body;
 		if (this.markers.parse) {
 			body = `
@@ -163,7 +119,7 @@ class Property {
 			body = `
 				${this.markers.def ? this.defaultExtractor() : ''}
 				${this.markers.def ? `else {` : ''}
-				${this.typeExtractor((this.markers.nestedItems.length > this.depth) ? this.markers.type : this.markers.items)}
+				${this.typeExtractor(type)}
 				${this.markers.def ? `\n}` : ''}
 			`;
 		}
@@ -196,27 +152,27 @@ class Property {
 		return `params[${index}]`;
 	}
 
-	private source(isArray?: boolean) {
-		return isArray
-			? `a[i]`
+	private source(level: number = this.level) {
+		return (this.isArray)
+			? `a${'a'.repeat(level)}[${this.index(level)}]`
 			: `source['${this.key}']`;
 	}
 
-	private dest(isArray?: boolean) {
-		return isArray
-			? `c[i]`
+	private dest(level: number = this.level) {
+		return (this.isArray)
+			? `c${'c'.repeat(level)}[${this.index(level)}]`
 			: `obj['${this.key}']`;
 	}
 
-	private arraySource(level = this.depth) {
+	private arraySource(level: number = this.level) {
 		return `a${'a'.repeat(level)}`;
 	}
 
-	private arrayDest(level = this.depth) {
+	private arrayDest(level: number = this.level) {
 		return `c${'c'.repeat(level)}`;
 	}
 
-	private index(level = this.depth) {
+	private index(level = this.level) {
 		return 'i' + 'i'.repeat(level);
 	}
 
@@ -228,31 +184,31 @@ class Property {
 	}
 
 	private parserExtractor() {
-		const param = this.param(this.depth ? this.markers.itemParse : this.markers.parse);
-		const index = this.depth ? ' i,' : '';
-		const parsePhase = `${param}(${this.source()}, ${index} '${this.key}', ${this.body()})`;
+		const parsePhase = `${this.param(this.markers.parse)}(${this.source()} '${this.key}', ${this.body()})`;
 		return `${this.dest()} = ${parsePhase};`;
 	}
 
-	private typeExtractor(type: Object, isArray: boolean = false) {
-		let phase = '';
+	private itemParserExtractor() {
+		const parsePhase = `${this.param(this.markers.itemParse)}(${this.source()}, ${this.index()} '${this.key}', ${this.body()})`;
+		return `${this.dest()} = ${parsePhase};`;
+	}
+
+	private typeExtractor(type: Object) {
+		const dest = this.dest();
+		const source = this.source();
 
 		switch (type) {
 			case Date:
-				phase = `${this.dest(isArray)} = new Date(${this.source(isArray)});`;
-				break;
+				return `${dest} = new Date(${source});`;
 			case Array:
-				phase = this.arrayExtractor();
-				break;
+				return this.arrayExtractor();
 			default:
 				if (hasMarkers(type)) {
-					phase = `${this.dest(isArray)} = parse(${this.param(type)}, ${this.source(isArray)});`;
+					return `${dest} = parse(${this.param(type)}, ${source});`;
 				} else {
-					phase = `${this.dest(isArray)} = ${this.source(isArray)};`;
+					return `${dest} = ${source};`;
 				}
 		}
-
-		return phase;
 	}
 
 	private arrayExtractor() {
@@ -265,24 +221,22 @@ class Property {
 		}
 
 		phase += `
-			for (let ${this.index()} = 0; ${this.index()} < ${this.arraySource()}.length; ${this.index()}++) {
+			for (let ${this.index()} = 0; ${this.index()} < ${this.arraySource(this.level)}.length; ${this.index()}++) {
 		`;
 
 		if (this.markers.nestedItems.length > this.depth) {
 			phase += `
-				let ${this.arraySource(this.depth + 1)} = ${this.arraySource(this.depth)}[${this.index(this.depth)}];
-				let ${this.arrayDest(this.depth + 1)} = ${this.arrayDest(this.depth)}[${this.index(this.depth)}] = [];
-				${new Property(this.modelName, this.key, this.markers.nestedItems[this.depth], this.depth + 1, this.options).execute()}
+				let ${this.arraySource(this.level + 1)} = ${this.arraySource(this.level)}[${this.index(this.level)}];
+				let ${this.arrayDest(this.level + 1)} = ${this.arrayDest(this.level)}[${this.index(this.level)}] = [];
+				${new Property(this.modelName, this.key, this.markers.nestedItems[this.level], this.level + 1, this.options).execute()}
+			`;
+		} else if(this.markers.itemParse) {
+			phase += `
+				${this.itemParserExtractor()};
 			`;
 		} else {
 			phase += `
-				${this.typeExtractor(this.markers.items, true)};
-			`;
-		}
-
-		if (this.markers.itemParse) {
-			phase += `
-				${this.parserExtractor()};
+				${this.typeExtractor(this.markers.items)}
 			`;
 		}
 

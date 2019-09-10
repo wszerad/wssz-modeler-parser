@@ -1,7 +1,7 @@
 import 'mocha';
 import 'reflect-metadata';
 import { expect } from 'chai';
-import { Default, Prop, Required } from '@wssz/modeler';
+import { Default, Items, Prop, Required } from '@wssz/modeler';
 import { ItemsParse, Parse } from '../src/decorators';
 import { parse } from '../src/parser';
 import { ArrayItems } from '@wssz/modeler/src/ArrayItems';
@@ -55,19 +55,20 @@ describe('tests', () => {
 			class NestedObjectType {
 				@Prop(OtherClass) pOther: OtherClass;
 			}
-			expect(parse(NestedObjectType, input)).to.eql({pOther: input.pOther.pDate});
+			expect(parse(NestedObjectType, input)).to.eql({pOther: {pDate: input.pOther.pDate}});
 		});
 
 		it('should copy object', () => {
 			class ShallowObjectType {
-				@Prop() pOther: OtherClass;
+				@Prop(Object) pOther: OtherClass;
 			}
-			expect(parse(ShallowObjectType, input)).to.equal({pOther: rawInput.pOther.pDate});
+			expect(parse(ShallowObjectType, input)).to.equal({pOther: {pDate: rawInput.pOther.pDate}});
 		});
 
 		it('should copy Date in array', () => {
 			class DataArrayType {
-				@Prop(Date) pArrayDate: Date[];
+				@Items(Date)
+				@Prop() pArrayDate: Date[];
 			}
 			expect(parse(DataArrayType, input)).to.eql({pArrayDate: input.pArrayDate});
 		});
@@ -112,7 +113,6 @@ describe('tests', () => {
 
 		it('should cast nested array', () => {
 			class NestedArrayLevel extends ArrayItems {
-
 				items: Date[];
 			}
 			class NestedArrayType {

@@ -22,4 +22,4 @@ class Test {
 	@Prop() prop: Date[][];
 }
 
-console.log(ModelerParse.parse(Test, {prop: [[0]]}));
+console.log(ModelerParse.parse(Test, {prop: []}));
