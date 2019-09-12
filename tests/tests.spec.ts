@@ -145,19 +145,5 @@ describe('tests', () => {
 			}
 			expect(parse(NestedArrayType, rawInput)).to.eql({pNestedArrayDate: input.pNestedArrayDate});
 		});
-
-		it('should catch undefined field', () => {
-			class RequiredObject {
-				@Prop(OtherClass)
-				@Required()
-				pUnsetOther: OtherClass;
-			}
-			try {
-				parse(RequiredObject, rawInput, {development: true})
-				expect(true).to.eq(false, 'Did not catch error!');
-			} catch (e) {
-				expect(typeof e).to.eq('object');
-			}
-		});
 	});
 });

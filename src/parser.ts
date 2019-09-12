@@ -5,7 +5,6 @@ import {
 	Markers,
 	getMarkers,
 	extractDecoratorMarkers,
-	Required,
 	Items,
 	NestedItems, PropMarkers
 } from '@wssz/modeler';
@@ -20,7 +19,6 @@ interface PropertyMarkers {
 	items: Object | true,
 	nestedItems: any[],
 	itemParse: Function,
-	required: boolean,
 	def: any
 }
 
@@ -92,7 +90,6 @@ class Property {
 			items: extractDecoratorMarkers(keyMarkers, Items),
 			nestedItems: extractDecoratorMarkers(keyMarkers, NestedItems),
 			itemParse: extractDecoratorMarkers(keyMarkers, ItemsParse),
-			required: extractDecoratorMarkers(keyMarkers, Required),
 			def: extractDecoratorMarkers(keyMarkers, Default)
 		}
 	}
@@ -209,7 +206,7 @@ class Property {
 				return this.arrayExtractor();
 			default:
 				if (hasMarkers(type)) {
-					return `${dest} = parse(${this.param(type)}, ${source});`;
+					return `${dest} = (${source} !== undefined ? parse(${this.param(type)}, ${source}) : undefined);`;
 				} else {
 					return `${dest} = ${source};`;
 				}
@@ -220,8 +217,9 @@ class Property {
 		let phase = '';
 		if (!this.depth) {
 			phase += `
-				let ${this.arraySource()} = ${this.source()};
-				let ${this.arrayDest()} = [];
+				if (Array.isArray(${this.source()})) {
+					let ${this.arraySource()} = ${this.source()};
+					let ${this.arrayDest()} = [];
 			`;
 		}
 
@@ -251,7 +249,8 @@ class Property {
 
 		if (!this.depth) {
 			phase += `
-				${this.dest()} = ${this.arrayDest()};
+					${this.dest()} = ${this.arrayDest()};
+				}
 			`;
 		}
 
