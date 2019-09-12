@@ -98,17 +98,20 @@ class Property {
 		}
 	}
 
-	get isArray(): boolean {
-		return this.depth !== false;
-	}
-
 	get level(): number {
 		return Number(this.depth);
 	}
 
 	execute() {
-		// cast array to simple type if there is no declared
-		const type = (this.markers.type === Array && !this.markers.items) ? undefined : this.markers.type;
+		let type;
+
+		if (this.markers.items || this.markers.itemParse) {
+			type = Array;
+		} else if (this.markers.type === Array && !this.markers.items) {
+			type = undefined;
+		} else {
+			type = this.markers.type;
+		}
 
 		let body;
 		if (this.markers.parse) {
@@ -119,7 +122,7 @@ class Property {
 			body = `
 				${this.markers.def ? this.defaultExtractor() : ''}
 				${this.markers.def ? `else {` : ''}
-				${this.typeExtractor(type)}
+				${this.typeExtractor(type, this.dest(), this.source())}
 				${this.markers.def ? `\n}` : ''}
 			`;
 		}
@@ -134,7 +137,7 @@ class Property {
 		try {
 			${body}
 		} catch (e) {
-			throw new Error('ModelerParser error at "${this.key}" filed of ${this.modelName} model!\\n'
+			throw new Error('ModelerParser error at "${this.key}" of ${this.modelName} model!\\n'
 			+ 'Message: ' + e.message + '\\n'
 			+ 'Input: ' + ${this.source()});
 		}`;
@@ -152,16 +155,22 @@ class Property {
 		return `params[${index}]`;
 	}
 
-	private source(level: number = this.level) {
-		return (this.isArray)
-			? `a${'a'.repeat(level)}[${this.index(level)}]`
-			: `source['${this.key}']`;
+	private source(level?: number) {
+		if (this.depth === false && level === undefined) {
+			return  `source['${this.key}']`;
+		}
+
+		level = level === undefined ? this.level : level;
+		return `a${'a'.repeat(level)}[${this.index(level)}]`;
 	}
 
-	private dest(level: number = this.level) {
-		return (this.isArray)
-			? `c${'c'.repeat(level)}[${this.index(level)}]`
-			: `obj['${this.key}']`;
+	private dest(level?: number) {
+		if (this.depth === false && level === undefined) {
+			return  `obj['${this.key}']`;
+		}
+
+		level = level === undefined ? this.level : level;
+		return `c${'c'.repeat(level)}[${this.index(level)}]`;
 	}
 
 	private arraySource(level: number = this.level) {
@@ -184,19 +193,16 @@ class Property {
 	}
 
 	private parserExtractor() {
-		const parsePhase = `${this.param(this.markers.parse)}(${this.source()} '${this.key}', ${this.body()})`;
+		const parsePhase = `${this.param(this.markers.parse)}(${this.source()}, '${this.key}', ${this.body()})`;
 		return `${this.dest()} = ${parsePhase};`;
 	}
 
 	private itemParserExtractor() {
-		const parsePhase = `${this.param(this.markers.itemParse)}(${this.source()}, ${this.index()} '${this.key}', ${this.body()})`;
-		return `${this.dest()} = ${parsePhase};`;
+		const parsePhase = `${this.param(this.markers.itemParse)}(${this.source(this.level)}, ${this.index()}, '${this.key}', ${this.body()})`;
+		return `${this.dest(this.level)} = ${parsePhase};`;
 	}
 
-	private typeExtractor(type: Object) {
-		const dest = this.dest();
-		const source = this.source();
-
+	private typeExtractor(type: Object, dest: string, source: string) {
 		switch (type) {
 			case Date:
 				return `${dest} = new Date(${source});`;
@@ -224,7 +230,7 @@ class Property {
 			for (let ${this.index()} = 0; ${this.index()} < ${this.arraySource(this.level)}.length; ${this.index()}++) {
 		`;
 
-		if (this.markers.nestedItems.length > this.depth) {
+		if (this.markers.nestedItems && this.markers.nestedItems.length > this.depth) {
 			phase += `
 				let ${this.arraySource(this.level + 1)} = ${this.arraySource(this.level)}[${this.index(this.level)}];
 				let ${this.arrayDest(this.level + 1)} = ${this.arrayDest(this.level)}[${this.index(this.level)}] = [];
@@ -232,11 +238,11 @@ class Property {
 			`;
 		} else if(this.markers.itemParse) {
 			phase += `
-				${this.itemParserExtractor()};
+				${this.itemParserExtractor()}
 			`;
 		} else {
 			phase += `
-				${this.typeExtractor(this.markers.items)}
+				${this.typeExtractor(this.markers.items, this.dest(this.level), this.source(this.level))}
 			`;
 		}
 
