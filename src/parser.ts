@@ -33,7 +33,6 @@ export function parse(model: Function, source: Object, options: ModelerParserOpt
 		parserCache.set(model, new Model(model, getMarkers(model), options).execute());
 	}
 
-	console.log(parserCache.get(model).toString());
 	return parserCache.get(model)(source, model, helpersCache, parse);
 }
 
