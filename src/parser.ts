@@ -3,15 +3,13 @@ import {
 	hasMarkers,
 	Prop,
 	Markers,
-	getMarkers,
 	extractDecoratorMarkers,
 	Items,
 	NestedItems, PropMarkers
 } from '@wssz/modeler';
 import { ItemsParse, Parse } from './decorators';
 
-const parserCache = new Map<any, Function>();
-const helpersCache: Function[] = [];
+export const helpersCache: Function[] = [];
 
 interface PropertyMarkers {
 	type: Object,
@@ -26,15 +24,7 @@ export interface ModelerParserOptions {
 	development?: boolean
 }
 
-export function parse(model: Function, source: Object, options: ModelerParserOptions = {}) {
-	if (!parserCache.has(model)) {
-		parserCache.set(model, new Model(model, getMarkers(model), options).execute());
-	}
-
-	return parserCache.get(model)(source, model, helpersCache, parse);
-}
-
-class Model {
+export class Model {
 	constructor(
 		private modelClass: Function,
 		private markers: Markers,

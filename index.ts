@@ -1,25 +1,14 @@
-import { parse } from './src/parser';
-import { Prop, Items, ArrayItems } from '@wssz/modeler';
+import { helpersCache, Model, ModelerParserOptions } from './src/parser';
+import { getMarkers } from '@wssz/modeler';
 export { Parse, ItemsParse } from './src/decorators';
 
+const parserCache = new Map<any, Function>();
 export class ModelerParse {
-	static parse(model: any, source: any) {
-		return parse(model, source);
+	static parse(model: Function, source: Object, options: ModelerParserOptions = {}) {
+		if (!parserCache.has(model)) {
+			parserCache.set(model, new Model(model, getMarkers(model), options).execute());
+		}
+
+		return parserCache.get(model)(source, model, helpersCache, ModelerParse.parse);
 	}
 }
-
-class OTest {
-	@Prop() prop: Date;
-}
-
-class Nested extends ArrayItems {
-	@Items(Date)
-	@Prop() items: Date[];
-}
-
-class Test {
-	@Items(Nested)
-	@Prop() prop: Date[][];
-}
-
-console.log(ModelerParse.parse(Test, {prop: []}));
