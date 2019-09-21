@@ -1,10 +1,9 @@
 import 'mocha';
 import 'reflect-metadata';
 import { expect } from 'chai';
-import { Default, Items, Prop } from '@wssz/modeler';
+import { Default, Items, Prop, ArrayItems } from '@wssz/modeler';
 import { ModelerParser } from '../index';
 import { ItemsParse, Parse } from '../src/decorators';
-import { ArrayItems } from '@wssz/modeler/src/ArrayItems';
 
 class OtherClass {
 	@Prop()

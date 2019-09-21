@@ -1,17 +1,22 @@
 {
 	"include": [
 		"index.ts",
-		"src/**/*.ts",
-		"tests/**/*.ts"
+		"src/**/*.ts"
 	],
-	"compileOnSave": true,
 	"compilerOptions": {
+		"strict": true,
+		"strictPropertyInitialization": false,
+		"strictNullChecks": false,
 		"sourceMap": true,
+		"declaration": true,
 		"moduleResolution": "node",
+		"module": "commonjs",
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
-		"declaration": true,
 		"target": "es6",
+		"outDir": "./dist",
+		"incremental": true,
+		"esModuleInterop": true,
 		"lib": [
 			"es7",
 			"es2017",
@@ -27,6 +32,7 @@
 	},
 	"exclude": [
 		"node_modules",
-		"dist/*"
+		"dist/*",
+		"tests/*"
 	]
 }
