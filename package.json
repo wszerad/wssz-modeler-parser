@@ -2,12 +2,11 @@
 	"name": "@wssz/modeler-parser",
 	"author": "wszerad91@gmail.com",
 	"license": "MIT",
-	"version": "0.2.4",
+	"version": "0.2.5",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"scripts": {
 		"prepublish": "tsc",
-		"publish": "npm publish",
 		"test": "mocha --require ts-node/register ./tests/*"
 	},
 	"devDependencies": {
@@ -23,7 +22,7 @@
 		"reflect-metadata": "^0.1.13",
 		"typescript": "^3.5.3",
 		"babel-polyfill": "^6.26.0",
-		"@wssz/modeler": "0.2.4"
+		"@wssz/modeler": "0.2.5"
 	},
 	"repository": {
 		"type": "git",
