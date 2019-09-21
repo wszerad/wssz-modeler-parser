@@ -1,5 +1,5 @@
 # @wssz/modeler-parser
-Plugin for @wssz/modeler, convert raw JSON objects
+Plugin for [@wssz/modeler](https://github.com/wszerad/wssz-modeler), convert raw JSON objects
 
 ## Usage
 

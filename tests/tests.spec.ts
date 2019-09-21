@@ -1,9 +1,9 @@
 import 'mocha';
 import 'reflect-metadata';
 import { expect } from 'chai';
-import { Default, Items, Prop, Required } from '@wssz/modeler';
+import { Default, Items, Prop } from '@wssz/modeler';
+import { ModelerParser } from '../index';
 import { ItemsParse, Parse } from '../src/decorators';
-import { parse } from '../src/parser';
 import { ArrayItems } from '@wssz/modeler/src/ArrayItems';
 
 class OtherClass {
@@ -35,35 +35,35 @@ describe('tests', () => {
 			class InvisibleType {
 				pInvisible: number;
 			}
-			expect(parse(InvisibleType, rawInput)).to.eql({});
+			expect(ModelerParser.parse(InvisibleType, rawInput)).to.eql({});
 		});
 
 		it('should copy simple type', () => {
 			class SimpleType {
 				@Prop() pString: string;
 			}
-			expect(parse(SimpleType, rawInput)).to.eql({pString: input.pString});
+			expect(ModelerParser.parse(SimpleType, rawInput)).to.eql({pString: input.pString});
 		});
 
 		it('should cast Date', () => {
 			class DateType {
 				@Prop() pDate: Date;
 			}
-			expect(parse(DateType, rawInput)).to.eql({pDate: input.pDate});
+			expect(ModelerParser.parse(DateType, rawInput)).to.eql({pDate: input.pDate});
 		});
 
 		it('should cast nested object', () => {
 			class NestedObjectType {
 				@Prop(OtherClass) pOther: OtherClass;
 			}
-			expect(parse(NestedObjectType, rawInput)).to.eql({pOther: {pDate: input.pOther.pDate}});
+			expect(ModelerParser.parse(NestedObjectType, rawInput)).to.eql({pOther: {pDate: input.pOther.pDate}});
 		});
 
 		it('should copy object', () => {
 			class ShallowObjectType {
 				@Prop(Object) pOther: OtherClass;
 			}
-			expect(parse(ShallowObjectType, rawInput)).to.eql({pOther: {pDate: rawInput.pOther.pDate}});
+			expect(ModelerParser.parse(ShallowObjectType, rawInput)).to.eql({pOther: {pDate: rawInput.pOther.pDate}});
 		});
 
 		it('should copy Date in array', () => {
@@ -71,21 +71,21 @@ describe('tests', () => {
 				@Items(Date)
 				@Prop() pArrayDate: Date[];
 			}
-			expect(parse(DataArrayType, rawInput)).to.eql({pArrayDate: input.pArrayDate});
+			expect(ModelerParser.parse(DataArrayType, rawInput)).to.eql({pArrayDate: input.pArrayDate});
 		});
 
 		it('should copy array', () => {
 			class ShallowArrayType {
 				@Prop() pArray: number[];
 			}
-			expect(parse(ShallowArrayType, rawInput)).to.eql({pArray: rawInput.pArray});
+			expect(ModelerParser.parse(ShallowArrayType, rawInput)).to.eql({pArray: rawInput.pArray});
 		});
 
 		it('should copy raw array', () => {
 			class ShallowArrayDateType {
 				@Prop() pArrayDate: Date[];
 			}
-			expect(parse(ShallowArrayDateType, rawInput)).to.eql({pArrayDate: rawInput.pArrayDate});
+			expect(ModelerParser.parse(ShallowArrayDateType, rawInput)).to.eql({pArrayDate: rawInput.pArrayDate});
 		});
 
 		it('should parse field', () => {
@@ -93,7 +93,7 @@ describe('tests', () => {
 				@Parse(v => v * 2)
 				@Prop() pParse: number;
 			}
-			expect(parse(ParseType, rawInput)).to.eql({pParse: input.pParse * 2});
+			expect(ModelerParser.parse(ParseType, rawInput)).to.eql({pParse: input.pParse * 2});
 		});
 
 		it('should parse array', () => {
@@ -101,7 +101,7 @@ describe('tests', () => {
 				@ItemsParse(v => v * 2)
 				@Prop() pArray: number[];
 			}
-			expect(parse(ParseArrayType, rawInput)).to.eql({pArray: input.pArrayParse});
+			expect(ModelerParser.parse(ParseArrayType, rawInput)).to.eql({pArray: input.pArrayParse});
 		});
 
 		it('should use default', () => {
@@ -109,7 +109,7 @@ describe('tests', () => {
 				@Default(20)
 				@Prop() pDefault: number;
 			}
-			expect(parse(DefaultType, rawInput)).to.eql({pDefault: 20});
+			expect(ModelerParser.parse(DefaultType, rawInput)).to.eql({pDefault: 20});
 		});
 
 		it('should pass nested array', () => {
@@ -119,10 +119,10 @@ describe('tests', () => {
 			class NestedArrayType {
 				@Prop(NestedArrayLevel) pNestedArray: number[][];
 			}
-			expect(parse(NestedArrayType, rawInput)).to.eql({pNestedArray: input.pNestedArray});
+			expect(ModelerParser.parse(NestedArrayType, rawInput)).to.eql({pNestedArray: input.pNestedArray});
 		});
 
-		it('should parse nested array', () => {
+		it('should ModelerParser.parse nested array', () => {
 			class NestedArrayLevel extends ArrayItems {
 				@ItemsParse(v => v * 2)
 				items: number[];
@@ -131,7 +131,7 @@ describe('tests', () => {
 				@Items(NestedArrayLevel)
 				@Prop(NestedArrayLevel) pNestedArray: number[][];
 			}
-			expect(parse(NestedArrayType, rawInput)).to.eql({pNestedArray: input.pNestedArrayParse});
+			expect(ModelerParser.parse(NestedArrayType, rawInput)).to.eql({pNestedArray: input.pNestedArrayParse});
 		});
 
 		it('should cast nested array with Date', () => {
@@ -143,7 +143,7 @@ describe('tests', () => {
 				@Items(NestedArrayLevel)
 				@Prop(NestedArrayLevel) pNestedArrayDate: Date[][];
 			}
-			expect(parse(NestedArrayType, rawInput)).to.eql({pNestedArrayDate: input.pNestedArrayDate});
+			expect(ModelerParser.parse(NestedArrayType, rawInput)).to.eql({pNestedArrayDate: input.pNestedArrayDate});
 		});
 	});
 });
