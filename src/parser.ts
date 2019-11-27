@@ -194,11 +194,17 @@ class Property {
 				return `${dest} = new Date(${source});`;
 			case Array:
 				return this.arrayExtractor();
+			case String:
+			case Number:
+			case Function:
+			case undefined:
+			case Object:
+				return `${dest} = ${source};`;
 			default:
 				if (hasMarkers(type)) {
 					return `${dest} = (${source} !== undefined ? parse(${this.param(type)}, ${source}) : undefined);`;
 				} else {
-					return `${dest} = ${source};`;
+					return `${dest} = new ${this.param(type)}(${source});`;
 				}
 		}
 	}

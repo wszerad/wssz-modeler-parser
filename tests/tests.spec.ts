@@ -5,6 +5,19 @@ import { Default, Items, Prop, ArrayItems } from '@wssz/modeler';
 import { ModelerParser } from '../index';
 import { ItemsParse, Parse } from '../src/decorators';
 
+class Caster {
+	private val: string;
+	constructor(props: string) {
+		this.val = props + '!';
+	}
+	get realValue() {
+		return this.val;
+	}
+	toJSON() {
+		return this.val.slice(0, -1);
+	}
+}
+
 class OtherClass {
 	@Prop()
 	pDate: Date;
@@ -26,7 +39,8 @@ describe('tests', () => {
 			pArrayParse: [8],
 			pNestedArray: [[1, 2]],
 			pNestedArrayParse: [[2, 4]],
-			pNestedArrayDate: [[new Date(date)]]
+			pNestedArrayDate: [[new Date(date)]],
+			pCaster: new Caster('123')
 		};
 		const rawInput = JSON.parse(JSON.stringify(input));
 
@@ -112,37 +126,38 @@ describe('tests', () => {
 		});
 
 		it('should pass nested array', () => {
-			class NestedArrayLevel extends ArrayItems {
-				items: number[];
-			}
 			class NestedArrayType {
-				@Prop(NestedArrayLevel) pNestedArray: number[][];
+				@Prop(Object) pNestedArray: number[][];
 			}
 			expect(ModelerParser.parse(NestedArrayType, rawInput)).to.eql({pNestedArray: input.pNestedArray});
 		});
 
 		it('should ModelerParser.parse nested array', () => {
 			class NestedArrayLevel extends ArrayItems {
-				@ItemsParse(v => v * 2)
-				items: number[];
+				@ItemsParse(v => v * 2) items: number[];
 			}
 			class NestedArrayType {
-				@Items(NestedArrayLevel)
-				@Prop(NestedArrayLevel) pNestedArray: number[][];
+				@Items(NestedArrayLevel) pNestedArray: number[][];
 			}
 			expect(ModelerParser.parse(NestedArrayType, rawInput)).to.eql({pNestedArray: input.pNestedArrayParse});
 		});
 
 		it('should cast nested array with Date', () => {
 			class NestedArrayLevel extends ArrayItems {
-				@Items(Date)
-				items: Date[];
+				@Items(Date) items: Date[];
 			}
 			class NestedArrayType {
-				@Items(NestedArrayLevel)
-				@Prop(NestedArrayLevel) pNestedArrayDate: Date[][];
+				@Items(NestedArrayLevel) pNestedArrayDate: Date[][];
 			}
 			expect(ModelerParser.parse(NestedArrayType, rawInput)).to.eql({pNestedArrayDate: input.pNestedArrayDate});
+		});
+
+		it('should cast custom caster class', () => {
+			class CasterClass {
+				@Prop() pCaster: Caster
+			}
+			expect(ModelerParser.parse(CasterClass, rawInput)).to.eql({pCaster: input.pCaster});
+			expect(input.pCaster.realValue.length).to.greaterThan(input.pCaster.toJSON().length);
 		});
 	});
 });
