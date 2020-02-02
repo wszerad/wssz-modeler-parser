@@ -1,0 +1,21 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  test:
+    name: Run tests for each push
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Setup node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: 13
+    - name: Install and test
+      run: |
+        npm install
+        npm test
