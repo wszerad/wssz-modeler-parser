@@ -10,7 +10,7 @@
 		"test": "mocha --require ts-node/register ./tests/*"
 	},
 	"devDependencies": {
-		"@types/chai": "^4.2.10",
+		"@types/chai": "^4.2.11",
 		"@types/mocha": "^7.0.2",
 		"@types/node": "^13.7.7",
 		"@types/reflect-metadata": "^0.1.0",
