@@ -26,7 +26,18 @@ class TestClass {
 ModelerParser.parse(TestClass, rawData);
 ```
 
+## Methods
+
+#### ModelerParser.parse(model, rawData)
+* force parse data to model (break if model is not valid)
+
+#### ModelerParser.optionalParse(model, rawData)
+* pass data without any change if there is no valid model
+
 ## Supported decorators
+
+#### @Nullable(): Decorator
+* let field be null
 
 #### @Prop<ParseFunction>(type?): Decorator
 * for arrays with undefined 'type' will use shallow copy
@@ -40,6 +51,9 @@ type BasicFunction = () => BasicType;
 ```
 
 ## Build-in decorators
+
+#### @Optional(): Decorator
+* ignore field if not defined
 
 #### @Parse(parse: ParseFunction): Decorator
 * define parse function for field

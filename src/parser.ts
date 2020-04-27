@@ -5,9 +5,9 @@ import {
 	Markers,
 	extractDecoratorMarkers,
 	Items,
-	NestedItems, PropMarkers
+	NestedItems, PropMarkers, Nullable
 } from '@wssz/modeler';
-import { ItemsParse, Parse } from './decorators';
+import { ItemsParse, Optional, Parse } from './decorators';
 
 export const helpersCache: Function[] = [];
 
@@ -17,7 +17,9 @@ interface PropertyMarkers {
 	items: Object | true,
 	nestedItems: any[],
 	itemParse: Function,
-	def: any
+	def: any,
+	optional: boolean,
+	nullable: boolean
 }
 
 export interface ModelerParserOptions {
@@ -26,7 +28,7 @@ export interface ModelerParserOptions {
 
 export class Model {
 	constructor(
-		private modelClass: Function,
+		private name: string,
 		private markers: Markers,
 		private options: ModelerParserOptions
 	) {}
@@ -36,7 +38,7 @@ export class Model {
 		const markers = this.markers || new Map();
 		for (let [key, keyMarkers] of markers.entries()) {
 			params.push(new Property(
-				this.modelClass.name,
+				this.name,
 				key as string,
 				keyMarkers,
 				false,
@@ -66,6 +68,7 @@ export class Model {
 
 class Property {
 	private markers: PropertyMarkers;
+	private ifChain = 0;
 
 	constructor(
 		private modelName: string,
@@ -80,7 +83,9 @@ class Property {
 			items: extractDecoratorMarkers(keyMarkers, Items),
 			nestedItems: extractDecoratorMarkers(keyMarkers, NestedItems),
 			itemParse: extractDecoratorMarkers(keyMarkers, ItemsParse),
-			def: extractDecoratorMarkers(keyMarkers, Default)
+			def: extractDecoratorMarkers(keyMarkers, Default),
+			optional: extractDecoratorMarkers(keyMarkers, Optional),
+			nullable:  extractDecoratorMarkers(keyMarkers, Nullable),
 		}
 	}
 
@@ -106,16 +111,28 @@ class Property {
 			`;
 		} else {
 			body = `
-				${this.markers.def ? this.defaultExtractor() : ''}
-				${this.markers.def ? `else {` : ''}
+				${this.addChain(this.markers.optional, this.optionalExtractor)}
+				${this.addChain(this.markers.def, this.defaultExtractor)}
+				${this.addChain(this.markers.nullable, this.nullableExtractor)}
+				${this.ifChain ? `else {` : ''}
 				${this.typeExtractor(type, this.dest(), this.source())}
-				${this.markers.def ? `\n}` : ''}
+				${this.ifChain ? `\n}` : ''}
 			`;
 		}
 
 		return this.options.development
 			? this.errorCatchWrapper(body)
 			: body;
+	}
+
+	private addChain(condition: boolean, exec: Function) {
+		if (!condition) return '';
+
+		if (!this.ifChain++) {
+			return 'if ' + exec.call(this);
+		} else {
+			return 'else if ' + exec.call(this);
+		}
 	}
 
 	private errorCatchWrapper(body: string) {
@@ -171,9 +188,19 @@ class Property {
 		return 'i' + 'i'.repeat(level);
 	}
 
+	private optionalExtractor() {
+		return `(!('${this.key}' in source)) {}`;
+	}
+
+	private nullableExtractor() {
+		return `(${this.source()} === null) {
+			${this.dest()} = null;
+		}`;
+	}
+
 	private defaultExtractor() {
 		const defaultPhase = this.param(this.markers.def) + (this.markers.def instanceof Function ? '()' : '');
-		return `if (${this.source()} === undefined) {
+		return `(${this.source()} === undefined) {
 			${this.dest()} = ${defaultPhase};
 		}`;
 	}
