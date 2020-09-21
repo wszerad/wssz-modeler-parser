@@ -20,7 +20,7 @@
 	},
 	"dependencies": {
 		"reflect-metadata": "^0.1.13",
-		"typescript": "^3.9.7",
+		"typescript": "^4.0.3",
 		"@wssz/modeler": "^0.5.4"
 	},
 	"repository": {
