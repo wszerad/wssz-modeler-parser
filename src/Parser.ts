@@ -1,5 +1,5 @@
 import {Markers} from '@wssz/modeler';
-import {codeCleaner, ModelerParserOptions, propertyExtractor} from "./utils";
+import {codeCleaner, ModelerParserOptions, propertyExtractor} from './utils';
 
 export class Parser {
 	constructor(

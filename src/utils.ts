@@ -1,5 +1,5 @@
-import {Markers} from "@wssz/modeler";
-import {Property} from "./Property";
+import {Markers} from '@wssz/modeler';
+import {Property} from './Property';
 
 export type Comparator<T> = {
     comparator: (x: T, y: T) => boolean;
@@ -9,7 +9,7 @@ export type CustomComparator<T> = [{ new(...args: any[]): T }, Comparator<T>];
 
 export interface ModelerParserOptions {
     development?: boolean,
-    customComparators?: CustomComparator<any>[] | Map<any, Comparator<any>>
+    customComparators?: CustomComparator<any>[]
 }
 
 export function codeCleaner(params: string[]) {
@@ -25,9 +25,9 @@ export function codeCleaner(params: string[]) {
 
 export function propertyExtractor(name: string, markers: Markers = new Map(), options: ModelerParserOptions) {
     const params: Property[] = [];
-    options = {
+    const parsedOptions = {
         ...options,
-        customComparators: new Map(options.customComparators || [])
+        customComparatorsMap: new Map(options.customComparators || [])
     };
     for (let [key, keyMarkers] of markers.entries()) {
         params.push(new Property(
@@ -35,7 +35,7 @@ export function propertyExtractor(name: string, markers: Markers = new Map(), op
             key as string,
             keyMarkers,
             false,
-            options
+	        parsedOptions
         ));
     }
     return params;

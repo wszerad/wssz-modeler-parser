@@ -1,5 +1,5 @@
 import {Markers} from '@wssz/modeler';
-import {codeCleaner, ModelerParserOptions, propertyExtractor} from "./utils";
+import {codeCleaner, ModelerParserOptions, propertyExtractor} from './utils';
 
 export class Comparator {
     constructor(
@@ -15,10 +15,11 @@ export class Comparator {
 
     execute() {
         const body = `
+            let pass = true;
             ${this.keysIterator()}
-            return true;
+            return pass;
 		`;
-        console.log(body);
+
         return new Function('source', 'obj', 'constructor', 'params', 'equal', body);
     }
 }

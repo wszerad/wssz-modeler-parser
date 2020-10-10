@@ -48,7 +48,7 @@ describe('tests', () => {
 	const rawInput = JSON.parse(JSON.stringify(input));
 
 	describe('equal', () => {
-		it('simple type', () => {
+		it('should compare simple type', () => {
 			class SimpleType {
 				@Prop() pString: string;
 			}
@@ -63,7 +63,7 @@ describe('tests', () => {
 			expect(ModelerParser.equal(SimpleType, input, otherWrong)).to.be.false;
 		});
 
-		it('Data type', () => {
+		it('should compare Data type', () => {
 			class DataType {
 				@Prop() pDate: Date;
 			}
@@ -78,7 +78,7 @@ describe('tests', () => {
 			expect(ModelerParser.equal(DataType, input, otherWrong)).to.be.false;
 		});
 
-		it('simple array', () => {
+		it('should compare simple array', () => {
 			class SimpleArray {
 				@Items(Number) pArray: number[];
 			}
@@ -93,7 +93,7 @@ describe('tests', () => {
 			expect(ModelerParser.equal(SimpleArray, input, otherWrong)).to.be.false;
 		});
 
-		it('nested model', () => {
+		it('should compare nested model', () => {
 			class NestedModel {
 				@Prop() pOther: OtherClass;
 			}
@@ -110,7 +110,7 @@ describe('tests', () => {
 			expect(ModelerParser.equal(NestedModel, input, otherWrong)).to.be.false;
 		});
 
-		it('deep nested array', () => {
+		it('should compare deep nested array', () => {
 			class NestedArray extends ArrayItems {
 				@Items(Number) items: number[];
 			}
@@ -133,7 +133,7 @@ describe('tests', () => {
 			expect(ModelerParser.equal(DeepNestedArray, input, otherWrong2)).to.be.false;
 		});
 
-		it('custom comparator', () => {
+		it('should use custom comparator', () => {
 			class Custom {
 				@Prop() pCaster: Caster;
 			}
@@ -145,10 +145,11 @@ describe('tests', () => {
 				pCaster: new Caster(input.pCaster.toJSON() +  'f')
 			};
 			const options: ModelerParserOptions = {
+				development: true,
 				customComparators: [[Caster, {comparator: (x, y) => x.toJSON() === y.toJSON()}]]
 			}
-			expect(ModelerParser.equal(Custom, input, other)).to.be.true;
-			expect(ModelerParser.equal(Custom, input, otherWrong)).to.be.false;
+			expect(ModelerParser.equal(Custom, input, other, options)).to.be.true;
+			expect(ModelerParser.equal(Custom, input, otherWrong, options)).to.be.false;
 		});
 	});
 

@@ -7,9 +7,9 @@ import {
     Nullable,
     Prop,
     PropMarkers
-} from "@wssz/modeler";
-import {ItemsParse, Optional, Parse} from "./decorators";
-import {ModelerParserOptions} from "./utils";
+} from '@wssz/modeler';
+import {ItemsParse, Optional, Parse} from './decorators';
+import { Comparator, ModelerParserOptions } from './utils';
 
 interface PropertyMarkers {
     type: Object,
@@ -33,7 +33,7 @@ export class Property {
         private key: string,
         keyMarkers: PropMarkers,
         private depth: number | false,
-        private options: ModelerParserOptions
+        private options: ModelerParserOptions & {customComparatorsMap: Map<any, Comparator<any>>}
     ) {
         this.markers = {
             type: extractDecoratorMarkers(keyMarkers, Prop),
@@ -99,7 +99,12 @@ export class Property {
             `;
 
         return this.options.development
-            ? this.errorCatchWrapper(body)
+            ? this.errorCatchWrapper(`
+                pass = (function compare() {
+                    ${body}
+                    return true;
+                })();
+            `)
             : body;
     }
 
@@ -196,7 +201,8 @@ export class Property {
     private typeComparator(type: Object, source0: string, source1: string) {
         switch (type) {
             case Date:
-                return `return Number(${source0}) !== Number(${source1});`;
+                const nullable = `typeof ${source0} !== typeof ${source1} || `;
+            	return `if (${nullable}Number(${source0}) !== Number(${source1}))  return false;`;
             case Array:
                 return this.arrayComparator();
             case String:
@@ -220,6 +226,11 @@ export class Property {
                         }
                     `;
                 } else {
+	                const custom = this.options.customComparatorsMap.get(type);
+	                if (custom) {
+		                return `if (!${this.param(custom.comparator)}(${source0}, ${source1})) return false;`;
+	                }
+
                     return `
                         if (${source0} !== ${source1}) {
                             return false;   
