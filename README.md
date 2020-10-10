@@ -5,34 +5,63 @@ Plugin for [@wssz/modeler](https://github.com/wszerad/wssz-modeler), convert raw
 
 * Object parser
 ```ts
+class NestedNumber extends ArrayItems {         // to handle nested array is needed to provide special class extended with ArrayItems
+    @ItemsParse((v) => v * 2) items: number[];
+}
+
 class OtherClass {
     @Default('default') pDef: string;           // if field is undefined set to 'default', can be also function
     @Parse((v) => v * 2) pParse: number;        // give full control of parsing
-    @ParseItem((v) => v * 2) pParse: number[];  // give control of parsing for each item
-    @Prop([[]])
-    @ParseItem((v) => v * 2)
-    pParse2: number[][];                        // for deep array @Prop with array depth is needed
+    @ItemsParse((v) => v * 2) pParse: number[]; // give control of parsing for each item
+    @Items(NestedNumber) pParse2: number[][];   // for deep array @Prop with array depth is needed
+}
+
+class NestedDate extends ArrayItems {
+    @Items(Date) items: Date[];
 }
 
 class TestClass {
-	@Prop() pString: string;                // just copy prop
-	@Prop() pDate: Date;                    // copy prop and cast to Date
-	@Prop(OtherClass) pOther: OtherClass;   // copy and assign to new OtherClass instance (argument is required, otherwise just copy raw object)
-	@Prop() pArray: string[]:               // copy array
-	@Prop([Date]) pArrayDate: Date[];       // copy array and cast to Date
-	@Prop([[Date]]) pArrayDate@D: Date[][]; // copy array (2d) and cast to Date, 3d - ([[[Date]]]), etc.
+	@Prop() pString: string;                   // just copy prop
+	@Prop() pDate: Date;                       // copy prop and cast to Date
+	@Prop(OtherClass) pOther: OtherClass;      // copy and assign to new OtherClass instance (argument is required, otherwise just copy raw object)
+	@Prop() pArray: string[];                  // copy array
+	@Items(Date) pArrayDate: Date[];           // copy array and cast to Dates
+	@Items(NestedDate) pArrayDate: Date[][];   // copy array (2d) and cast to Date
 }
 
 ModelerParser.parse(TestClass, rawData);
 ```
 
+## Options
+```ts
+export interface ModelerParserOptions {
+    development?: boolean,
+    customComparators?: CustomComparator<any>[]
+}
+```
+* development - turn on to get more accurate error messages
+* customComparators - used in `.equal` to define manual comparators
+```ts
+{
+    customComparators: [
+        [CustomObject, {comparator: (x, y) => x === y}]
+    ]
+}
+```
+
 ## Methods
 
-#### ModelerParser.parse(model, rawData)
+#### ModelerParser.parse(model, rawData, options)
 * force parse data to model (break if model is not valid)
 
-#### ModelerParser.optionalParse(model, rawData)
-* pass data without any change if there is no valid model
+#### ModelerParser.optionalParse(model, rawData, options)
+* return rawData back if Model has no decorators otherwise works like `.parse`
+
+#### ModelerParser.equal(model, source0, source1, options)
+* deep comparison based on provided model
+
+#### ModelerParser.clearCache()
+* clean all cached parsers and comparator
 
 ## Supported decorators
 

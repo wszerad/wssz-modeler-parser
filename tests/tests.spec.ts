@@ -2,7 +2,7 @@ import 'mocha';
 import 'reflect-metadata';
 import { expect } from 'chai';
 import { Default, Items, Prop, ArrayItems, Nullable } from '@wssz/modeler';
-import { ModelerParser, Optional } from '../index';
+import {ModelerParser, ModelerParserOptions, Optional} from '../index';
 import { ItemsParse, Parse } from '../src/decorators';
 
 class Caster {
@@ -27,27 +27,133 @@ class OtherClass {
 }
 
 describe('tests', () => {
-	describe('parser', () => {
-		const date = new Date();
-		const input = {
-			pDate: new Date(date),
-			pNullDate: null as Date,
-			pString: 'kot',
-			pOther: {
-				pDate: new Date(date)
-			},
-			pInvisible: 5,
-			pParse: 10,
-			pArray: [4],
-			pArrayDate: [new Date(date)],
-			pArrayParse: [8],
-			pNestedArray: [[1, 2]],
-			pNestedArrayParse: [[2, 4]],
-			pNestedArrayDate: [[new Date(date)]],
-			pCaster: new Caster('123')
-		};
-		const rawInput = JSON.parse(JSON.stringify(input));
+	const date = new Date();
+	const input = {
+		pDate: new Date(date),
+		pNullDate: null as Date,
+		pString: 'kot',
+		pOther: {
+			pDate: new Date(date)
+		},
+		pInvisible: 5,
+		pParse: 10,
+		pArray: [4],
+		pArrayDate: [new Date(date)],
+		pArrayParse: [8],
+		pNestedArray: [[1, 2]],
+		pNestedArrayParse: [[2, 4]],
+		pNestedArrayDate: [[new Date(date)]],
+		pCaster: new Caster('123')
+	};
+	const rawInput = JSON.parse(JSON.stringify(input));
 
+	describe('equal', () => {
+		it('should compare simple type', () => {
+			class SimpleType {
+				@Prop() pString: string;
+			}
+
+			const other: SimpleType = {
+				pString: input.pString
+			};
+			const otherWrong: SimpleType = {
+				pString: input.pString + 'postfix'
+			};
+			expect(ModelerParser.equal(SimpleType, input, other)).to.be.true;
+			expect(ModelerParser.equal(SimpleType, input, otherWrong)).to.be.false;
+		});
+
+		it('should compare Data type', () => {
+			class DataType {
+				@Prop() pDate: Date;
+			}
+
+			const other: DataType = {
+				pDate: input.pDate
+			};
+			const otherWrong: DataType = {
+				pDate: new Date(input.pDate.getTime() + 1000)
+			};
+			expect(ModelerParser.equal(DataType, input, other)).to.be.true;
+			expect(ModelerParser.equal(DataType, input, otherWrong)).to.be.false;
+		});
+
+		it('should compare simple array', () => {
+			class SimpleArray {
+				@Items(Number) pArray: number[];
+			}
+
+			const other: SimpleArray = {
+				pArray: input.pArray
+			};
+			const otherWrong: SimpleArray = {
+				pArray: input.pArray.concat(2)
+			};
+			expect(ModelerParser.equal(SimpleArray, input, other)).to.be.true;
+			expect(ModelerParser.equal(SimpleArray, input, otherWrong)).to.be.false;
+		});
+
+		it('should compare nested model', () => {
+			class NestedModel {
+				@Prop() pOther: OtherClass;
+			}
+
+			const other: NestedModel = {
+				pOther: input.pOther
+			};
+			const otherWrong: NestedModel = {
+				pOther: {
+					pDate: new Date(input.pOther.pDate.getTime() + 1000)
+				}
+			};
+			expect(ModelerParser.equal(NestedModel, input, other)).to.be.true;
+			expect(ModelerParser.equal(NestedModel, input, otherWrong)).to.be.false;
+		});
+
+		it('should compare deep nested array', () => {
+			class NestedArray extends ArrayItems {
+				@Items(Number) items: number[];
+			}
+
+			class DeepNestedArray {
+				@Items(NestedArray) pNestedArray: number[][];
+			}
+
+			const other: DeepNestedArray = {
+				pNestedArray: input.pNestedArray.slice().map(i => i.slice())
+			};
+			const otherWrong: DeepNestedArray = {
+				pNestedArray: [...input.pNestedArray, [0]]
+			};
+			const otherWrong2: DeepNestedArray = {
+				pNestedArray: [[...input.pNestedArray[0], 0]]
+			};
+			expect(ModelerParser.equal(DeepNestedArray, input, other)).to.be.true;
+			expect(ModelerParser.equal(DeepNestedArray, input, otherWrong)).to.be.false;
+			expect(ModelerParser.equal(DeepNestedArray, input, otherWrong2)).to.be.false;
+		});
+
+		it('should use custom comparator', () => {
+			class Custom {
+				@Prop() pCaster: Caster;
+			}
+
+			const other: Custom = {
+				pCaster: new Caster(input.pCaster.toJSON())
+			};
+			const otherWrong: Custom = {
+				pCaster: new Caster(input.pCaster.toJSON() +  'f')
+			};
+			const options: ModelerParserOptions = {
+				development: true,
+				customComparators: [[Caster, {comparator: (x, y) => x.toJSON() === y.toJSON()}]]
+			}
+			expect(ModelerParser.equal(Custom, input, other, options)).to.be.true;
+			expect(ModelerParser.equal(Custom, input, otherWrong, options)).to.be.false;
+		});
+	});
+
+	describe('parser', () => {
 		it('should ignore undecorated field', () => {
 			class InvisibleType {
 				pInvisible: number;
