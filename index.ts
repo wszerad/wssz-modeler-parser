@@ -1,8 +1,8 @@
 import { Parser} from './src/Parser';
 import { Comparator } from './src/comparator';
 import { getMarkers, hasMarkers } from '@wssz/modeler';
-import {helpersCache} from "./src/Property";
-import {ModelerParserOptions} from "./src/utils";
+import {helpersCache} from './src/Property';
+import {ModelerParserOptions} from './src/utils';
 
 export { Parse, ItemsParse, Optional } from './src/decorators';
 
